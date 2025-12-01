@@ -1,0 +1,23 @@
+# Guasti Transform - Python Dependencies
+# Install with: pip install -r requirements.txt
+
+# Core scientific computing
+numpy>=1.21.0
+scipy>=1.7.0
+
+# Visualization
+matplotlib>=3.4.0
+
+# Optional: for interactive notebooks
+jupyter>=1.0.0
+ipywidgets>=7.6.0
+
+# Optional: for documentation
+sphinx>=4.0.0
+sphinx-rtd-theme>=1.0.0
+
+# Development and testing
+pytest>=7.0.0
+pytest-cov>=3.0.0
+black>=22.0.0
+flake8>=4.0.0
