@@ -1,0 +1,54 @@
+# .github/workflows/release-assets.yml
+name: release-assets
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  pack-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build release bundle (docs + minimal code + latest index)
+        run: |
+          set -e
+          mkdir -p dist
+
+          # Bundle “lecture” (papier + docs)
+          tar -czf dist/guasti-docs-${GITHUB_REF_NAME}.tar.gz \
+            README.md \
+            CHANGELOG.md \
+            LICENSE \
+            CITATION.cff \
+            CONTRIBUTING.md \
+            SECURITY.md \
+            CODE_OF_CONDUCT.md \
+            EXPERIMENTS.md \
+            RESULTS_TEMPLATE.md \
+            docs \
+            results/index || true
+
+          # Bundle “source” (sans gros dossiers)
+          tar -czf dist/guasti-source-${GITHUB_REF_NAME}.tar.gz \
+            .github \
+            pyproject.toml \
+            requirements.txt \
+            requirements-dev.txt \
+            src \
+            tests \
+            *.md \
+            docs \
+            -C . .gitignore
+
+      - name: Create Release + upload assets
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            dist/guasti-docs-${{ github.ref_name }}.tar.gz
+            dist/guasti-source-${{ github.ref_name }}.tar.gz
