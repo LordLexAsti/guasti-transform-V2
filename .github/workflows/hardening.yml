@@ -1,0 +1,35 @@
+# .github/workflows/hardening.yml
+name: hardening
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure no large binaries slipped in
+        run: |
+          set -e
+          # bloque les gros fichiers (ex: > 20MB) en PR/commit
+          max=20000000
+          bad=$(find . -type f -not -path "./.git/*" -size +"${max}c" | head -n 20)
+          if [ -n "$bad" ]; then
+            echo "Found files > 20MB (add to releases or LFS):"
+            echo "$bad"
+            exit 1
+          fi
+
+      - name: Secret-like patterns scan (simple)
+        run: |
+          set -e
+          # scan grossier (évite les faux positifs trop agressifs)
+          if grep -RIn --exclude-dir=.git --exclude-dir=.venv \
+            -E "(api_key|secret_key|BEGIN PRIVATE KEY|xox[baprs]-|AKIA[0-9A-Z]{16})" . ; then
+            echo "Potential secret detected. Remove it or move to .env + gitignore."
+            exit 1
+          fi
+          echo "No obvious secrets detected."
