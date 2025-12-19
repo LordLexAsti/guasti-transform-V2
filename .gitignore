@@ -1,0 +1,13 @@
+# .gitignore (ajouts utiles)
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+results/
+data/
+dist/
+build/
+*.egg-info/
+.env
+.DS_Store
