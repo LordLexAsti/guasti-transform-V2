@@ -1,0 +1,29 @@
+# CITATION.cff
+cff-version: 1.2.0
+message: "If you use this software or its ideas in academic work, please cite it."
+title: "Guasti Grid / Guasti Transform"
+type: software
+authors:
+  - family-names: "Guasti"
+    given-names: "Alexandre"
+repository-code: "https://github.com/LordLexAsti/guasti-transform-V2"
+abstract: >
+  A discrete geometric visualization of divisibility (Guasti Grid) and an experimental framework
+  (angular sieve, polarity, primorial breathing patterns) aimed at pedagogical clarity and falsifiable
+  scoring experiments for prime candidate filtering.
+keywords:
+  - number theory
+  - primes
+  - divisibility
+  - visualization
+  - wheel factorization
+  - pedagogy
+license: "MIT"
+preferred-citation:
+  type: software
+  title: "Guasti Grid / Guasti Transform"
+  authors:
+    - family-names: "Guasti"
+      given-names: "Alexandre"
+  year: 2025
+  url: "https://github.com/LordLexAsti/guasti-transform-V2"
