@@ -1,0 +1,37 @@
+# .github/ISSUE_TEMPLATE/feature_request.yml
+name: Feature request
+description: Proposer une amélioration (docs, code, expérimentation)
+title: "[FEAT] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Objectif
+      description: En une phrase, quel problème ça résout ?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposition
+      description: Décris la solution (API, docs, ou protocole).
+    validations:
+      required: true
+
+  - type: textarea
+    id: falsifiable
+    attributes:
+      label: Critère falsifiable / métrique
+      description: Comment on saura que ça marche (lift, robustesse, invariants, etc.) ?
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope & risques
+      description: Ce que ça casse potentiellement, ou ce que ça n’essaie pas de faire.
+    validations:
+      required: false
