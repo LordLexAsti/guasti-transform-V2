@@ -1,278 +1,427 @@
-# 🌀 The Guasti Transform
+# Guasti — Ordre cyclique & score multi-échelle (P = 2310)
 
-**A Geometric Framework for Multiplicative Structure Analysis**
+Ce dépôt documente une étape **reproductible** et **falsifiable** de l’approche “Grille / Transformée de Guasti” appliquée à la **priorisation** des candidats premiers via :
+- un **ordre cyclique** (roue primorielle) : classes résiduelles copremières à `P`,
+- un **motif de respiration** : gaps cycliques entre résidus survivants,
+- une annotation “Guasti-compatible” : **seuls les impacts de divisibilité** (rayons) sont utilisés,
+- un **score** multi-échelle + texture locale, mesuré par **precision@K**.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![Validated: TriadIA](https://img.shields.io/badge/Validated-TriadIA-green.svg)](#validation)
-
----
-
-## 📖 Overview
-
-The **Guasti Transform** is a novel mathematical framework that reveals hidden geometric structures in integer factorization through logarithmic spiral representation and angular signatures.
-
-This theory provides:
-- 🔷 **9 validated theorems** on perfect squares, primes, and multiplicative structure
-- 🌀 **Geometric characterization** of integers via angular signatures
-- 🔗 **Integration** with classical Pythagorean multiplication tables
-- 📚 **Pedagogical tools** for teaching number theory
+> Important : ce travail **ne prouve pas** la primalité et **ne prétend pas** résoudre l’Hypothèse de Riemann.  
+> Il fournit une méthode de **tri / priorisation** dans un espace de candidats cycliquement structuré.
 
 ---
 
-## 🎯 Key Results
+## 1) Définitions
 
-### Theorem 1: Perfect Square Detection via 45°
-> An integer n > 1 is a perfect square **if and only if** its angular signature contains exactly 45°.
+### 1.1 Roue primorielle (ordre cyclique des candidats)
 
-```python
-from src.guasti_core import has_45_degree
+Soit `P` une primorielle (ici `P = 2310 = 2·3·5·7·11`).
 
-has_45_degree(36)  # True (36 = 6²)
-has_45_degree(35)  # False
+Les **résidus survivants** (candidats possibles) sont :
+\[
+R(P)=\{r\in\{1,\dots,P\}:\gcd(r,P)=1\}.
+\]
+
+Tout entier `n` tel que `gcd(n,P)=1` appartient à une classe :
+\[
+n \equiv r \pmod P,\quad r\in R(P).
+\]
+
+C’est l’**ordre cyclique** de base : l’ensemble des candidats est périodique modulo `P`.
+
+### 1.2 Motif de respiration
+
+Écrire `R(P)` trié :
+\[
+R(P)=\{r_1<r_2<\dots<r_{\varphi(P)}\}.
+\]
+
+Définir les **gaps cycliques** :
+\[
+g_i =
+\begin{cases}
+r_{i+1}-r_i & \text{pour } i<\varphi(P),\\
+(P+r_1)-r_{\varphi(P)} & \text{pour } i=\varphi(P).
+\end{cases}
+\]
+
+Le **motif de respiration** est :
+\[
+\mathcal{G}(P)=(g_1,\dots,g_{\varphi(P)}),
+\]
+avec \(\sum g_i = P\).
+
+---
+
+## 2) Annotation Guasti-compatible : “rayons” (divisibilité) & texture
+
+### 2.1 Impacts multi-échelle (rayons)
+
+On fixe des échelles `D_list = [31, 101, 251]` (nombres premiers ≤ D).
+
+Pour un entier `n`, on note :
+- `cD(n)` : nombre de **premiers** `p ≤ D` tels que `p | n`,
+- `sD(n) = 1/(1 + cD(n))` : “silence” (plus cD est petit, plus c’est silencieux).
+
+On utilise donc :
+- `s31(n)`, `s101(n)`, `s251(n)`.
+
+### 2.2 Proxy angulaire minimal (optionnel mais utilisé)
+
+On note `spf(n)` le plus petit diviseur premier `≤ 251` (ou 0 si aucun).
+
+\[
+\theta_{\min}(n) =
+\begin{cases}
+\arctan\big(n / \mathrm{spf}(n)^2\big) & \text{si spf(n)>0},\\
+\pi/2 & \text{sinon (silence)}.
+\end{cases}
+\]
+
+Normalisation :
+\[
+ang(n) = \theta_{\min}(n) / (\pi/2) \in [0,1].
+\]
+
+### 2.3 Texture locale (saturation de voisinage)
+
+On définit une fenêtre locale de rayon `w` (ici `w=3`) et :
+- `sat31(n)` : moyenne de `c31` sur `[n-w, …, n+w]`.
+
+Intuition : une zone localement saturée en impacts (beaucoup de multiples) est moins “prime-ish”.
+
+---
+
+## 3) Score v1 (sans résidu) — Version recommandée pour relecture hostile
+
+Paramètres :
+- `P = 2310`
+- `D_list = [31, 101, 251]`
+- `w = 3`
+
+Pour un candidat `n` (avec `gcd(n,P)=1`), définir :
+- `r = n mod P` (remplacer `0` par `P`),
+- `gap_norm = gap(r) / max(G(P))`.
+
+**Score v1 (sans résidu)** :
+\[
+\mathrm{score}(n)=
+0.40\,s31(n) + 0.30\,s101(n) + 0.18\,s251(n)
++ 0.08\,ang(n)
++ 0.04\,gap\_norm(n)
+- 0.06\,\mathrm{clip}\big(sat31(n)/4, 0, 1\big).
+\]
+
+> Cette version n’utilise **aucun prior appris** sur les résidus : elle est plus “structurelle”.
+
+---
+
+## 4) Pseudo-code (canonique)
+
+```pseudo
+P := 2310
+D_list := [31, 101, 251]
+w := 3
+
+R := { r in 1..P : gcd(r,P)=1 }
+G := gaps cycliques de R
+gap_of_residue[r] := gap associé
+max_gap := max(G)
+
+Precompute primes ≤ 251
+Precompute for all n:
+  c31[n], c101[n], c251[n]  # nb de petits premiers divisant n
+  sat31[n]                  # moyenne locale de c31 sur n±w
+  spf[n]                    # plus petit diviseur premier ≤ 251 sinon 0
+
+Candidates C := { n in [A..B] : gcd(n,P)=1 }
+
+For each n in C:
+  s31 := 1/(1+c31[n]); s101 := 1/(1+c101[n]); s251 := 1/(1+c251[n])
+  if spf[n]==0: theta_min := π/2 else theta_min := atan(n/spf[n]^2)
+  ang := theta_min/(π/2)
+  r := n mod P; if r==0 then r:=P
+  gap_norm := gap_of_residue[r] / max_gap
+  neigh := sat31[n]
+
+  score(n) :=
+     0.40*s31 + 0.30*s101 + 0.18*s251
+   + 0.08*ang + 0.04*gap_norm
+   - 0.06*clip(neigh/4,0,1)
+
+Sort C by score descending
+Measure precision@K for K ∈ {100,500,1000,5000,20000}
 ```
 
-### Theorem 2: Prime Square Signature
-> Squares of primes p² have the minimal signature: **{45°, 90°}**
+---
 
-| n | Type | Signature | τ(n) |
-|---|------|-----------|------|
-| 4 = 2² | Prime square | {45°, 90°} | 3 |
-| 9 = 3² | Prime square | {45°, 90°} | 3 |
-| 36 = 6² | Composite square | 5 angles | 9 |
+## 5) Métrique : Precision@K (priorisation)
 
-### The Arithmetic Palimpsest
-> "Prime numbers are the indelible ink: everything else has been rewritten, corrected, crossed out by successive layers of factors. Primes alone have never been retouched – they are the letters that survived all corrections."
+On mesure :
+- `base_rate` : taux de premiers parmi les candidats `gcd(n,P)=1`,
+- `P@K` : proportion de nombres premiers dans les `K` meilleurs scores.
+
+> `P@K` évalue la **qualité de tri**, pas une preuve de primalité.
 
 ---
 
-## 🚀 Quick Start
+## 6) Reproduction rapide
 
-### Installation
-
+### Installer
 ```bash
-git clone https://github.com/LordLexAsti/guasti-transform.git
-cd guasti-transform
 pip install -r requirements.txt
 ```
 
-### Basic Usage
-
-```python
-from src.guasti_core import (
-    guasti_transform,
-    angular_signature,
-    classify_by_signature
-)
-
-# Get the Guasti transform of a number
-phi = guasti_transform(100, N_max=1000)
-print(f"Position: r={phi['r']:.2f}, θ={phi['theta']:.2f}°")
-
-# Get angular signature
-sig = angular_signature(36)
-print(f"Signature of 36: {sig}")  # Contains 45° (it's a square)
-
-# Classify a number
-classification = classify_by_signature(25)
-print(f"25 is: {classification}")  # "PRIME_SQUARE"
+### Exemple : une fenêtre
+```bash
+python -m src.eval --P 2310 --A 500001 --B 1000000 --w 3 --K 100 500 1000 5000 20000
 ```
 
-### Generate Visualizations
-
-```python
-from src.guasti_visualizations import plot_all_figures
-
-# Generate all figures
-plot_all_figures(N_max=200, output_dir="figures/")
+### Exemple : 4 fenêtres (falsifiabilité)
+```bash
+python -m src.eval --P 2310 --windows 2 250000 250001 500000 500001 750000 750001 1000000 --w 3 --K 5000
 ```
 
 ---
 
-## 📊 Visualizations
+## 7) Conjecture falsifiable
 
-| Figure | Description |
-|--------|-------------|
-| ![Spiral](figures/guasti_spiral_preview.png) | Logarithmic spiral representation |
-| ![Superposition](figures/guasti_superposition_preview.png) | Pythagorean-Guasti overlay |
-| ![Palimpsest](figures/guasti_palimpsest_preview.png) | Arithmetic palimpsest |
+**Conjecture-Score2310-v1**  
+Avec `P=2310`, `D_list=[31,101,251]`, `w=3`, score v1 sans résidu :
 
----
+> Sur toute fenêtre de taille 250 000 située dans `[250001, 1000000]`, on observe **P@5000 ≥ 0,70**.
 
-## 📁 Project Structure
-
-```
-guasti-transform/
-├── README.md                 # This file
-├── LICENSE                   # MIT License
-├── requirements.txt          # Python dependencies
-├── setup.py                  # Package installation
-│
-├── src/                      # Source code
-│   ├── __init__.py
-│   ├── guasti_core.py        # Core mathematical functions
-│   ├── guasti_visualizations.py  # Plotting functions
-│   ├── guasti_palimpsest.py  # Palimpsest analysis
-│   └── guasti_utils.py       # Utility functions
-│
-├── docs/                     # Documentation
-│   ├── THEORY.md             # Mathematical foundations
-│   ├── PUBLICATION_PLAN.md   # Academic publication plan
-│   └── TRIADIA_CREDITS.md    # Validation methodology
-│
-├── figures/                  # Generated visualizations
-│   └── ...
-│
-├── examples/                 # Example scripts
-│   ├── basic_usage.py
-│   ├── rsa_analysis.py
-│   └── pedagogical_demo.py
-│
-└── tests/                    # Unit tests
-    └── test_theorems.py
-```
+**Réfutation** : si une fenêtre valide ces paramètres et donne **P@5000 < 0,70**, la conjecture est réfutée (pour cette version).
 
 ---
 
-## 📐 Mathematical Framework
 
-### The Guasti Transform
 
-For an integer n ≥ 2:
+## Y) Loi de polarité (mod 6) — formulation canonique
 
-$$\Phi(n) = \sqrt{n} \cdot e^{2\pi i \log(n) / \log(N_{max})}$$
+Pour tout entier \(n\) **copremier à 6** (donc non divisible par 2 ni par 3), on définit :
 
-In polar coordinates: $(r, \theta) = (\sqrt{n}, 2\pi \log(n) / \log(N_{max}))$
+- **Droite** `D` si \(n\equiv 1 \pmod 6\)
+- **Gauche** `G` si \(n\equiv 5 \pmod 6\) (i.e. \(n\equiv -1 \pmod 6\))
 
-### Angular Signature
+On peut définir une “charge” :
 
-For each divisor pair (d, n/d):
+\[
+\chi(n)=\begin{cases}
++1 & \text{si } n\equiv 1\ (\mathrm{mod}\ 6),\\
+-1 & \text{si } n\equiv 5\ (\mathrm{mod}\ 6).
+\end{cases}
+\]
 
-$$\theta_{d} = \arctan2(\log(n/d), \log(d))$$
+**Lemme (polarité multiplicative mod 6).**  
+Si \(\gcd(a,6)=\gcd(b,6)=1\), alors \(\chi(ab)=\chi(a)\chi(b)\).  
+En particulier :
 
-The signature is: $\Theta(n) = \{\theta_d : d | n\}$
+- `G × G → D` (\(-\times- = +\))
+- `D × D → D` (\(+\times+ = +\))
+- `G × D → G` (\(-\times+ = -\))
 
-### Key Properties
+Et comme corollaire : pour tout \(n\) copremier à 6, \(n^2\equiv 1\pmod 6\) — **les carrés survivants tombent toujours à Droite**.
 
-| Number Type | Angular Signature | Entropy H(n) |
-|-------------|-------------------|--------------|
-| Prime p | {0°, 90°} | 1.0 |
-| Prime square p² | {45°, 90°} | 1.585 |
-| Composite | Multiple angles | > 1.585 |
-| Perfect square k² | Contains 45° | Varies |
 
----
 
-## 🔬 The 9 Validated Theorems
+## Z) Trinité fondatrice (niveau Guasti)
 
-| # | Theorem | Description |
-|---|---------|-------------|
-| 1 | **45° Criterion** | Perfect squares ⟺ signature contains 45° |
-| 2 | **Prime Square Signature** | p² has exactly {45°, 90°} |
-| 3 | **Guasti-Pythagoras Identity** | k² + 2ab = (a+b)² |
-| 4 | **Spectral Inheritance** | Mod 4 classes affect angular distribution |
-| 5 | **Divisor-Angle Correspondence** | τ(n) = number of angles |
-| 6 | **Geometric Exclusion** | Primes are excluded from grid center |
-| 7 | **Structural Robustness** | Invariants survive representation changes |
-| 8 | **Topological Classification** | RIGID/CRYSTALLINE/ELASTIC types |
-| 9 | **Elastic Deformation Index** | Homotopic complexity metric |
+Ce bloc formalise **ton intuition** : 1–2–3 ne sont pas seulement “les premiers nombres”, ce sont les **fondations computationnelles** du stade.
 
----
+> **Trinité fondatrice (niveau Guasti)**  
+> **1** est le repère (unité / alignement).  
+> **2** est l’opérateur de parité (duplication minimale : 1+1) ; il tranche l’espace pair/impair.  
+> **3** est l’opérateur de rythme (premier impair structurant) ; avec 2, il installe le cycle mod 6 et les piliers.  
+> Ensemble, ils définissent le stade sur lequel la respiration cyclique et les rayons des autres premiers deviennent lisibles.
 
-## 🔐 Cryptographic Applications
+**Note “relecture hostile” (importante)** : ceci décrit un **statut fonctionnel** dans le moteur de filtrage (grille/tamis), **pas** une redéfinition de la primalité au sens classique. Arithmétiquement, 2 et 3 restent des nombres premiers standard ; opératoirement, ils jouent un rôle d’architectes car ils définissent la première compression (mod 6).
 
-### RSA Quality Assessment
+## AA) Falsifiabilité (tests quantifiés + lecture hostile)
 
-The Guasti framework provides geometric heuristics for RSA key quality:
+Cette section définit **ce qui peut échouer** (et donc ce qui rend l’approche testable).  
+Elle distingue : (i) des **invariants** (doivent être vrais si l’implémentation est correcte), (ii) des **promesses** (doivent battre des baselines), (iii) des **limites** (où la méthode ne prétend pas faire mieux).
 
-```python
-from src.guasti_crypto import rsa_quality_assessment
+### AA.1 Définitions (pour mesurer sans poésie)
 
-N = 101 * 103  # RSA modulus
-quality = rsa_quality_assessment(N)
-print(quality)
-# {'delta_45': 12.3, 'vulnerability': 'LOW', 'recommendation': 'Acceptable'}
-```
+On se donne un primorial \(P\in\{30,210,2310,\dots\}\) et une fenêtre d’étude \([A,B]\).
 
-**⚠️ Important:** This is NOT a factorization algorithm. It provides quality heuristics, not cryptographic attacks.
+- **Candidats wheel** : \(C(P;A,B)=\{n\in[A,B] : \gcd(n,P)=1\}\).
+- **Vérité terrain** :
+  - `isPrime(n)` via test déterministe 64-bit (Miller–Rabin bases fixes) ou via crible exact pour fenêtres petites.
+  - Optionnel : `smallFactor(n)` = plus petit facteur premier \(\le \sqrt{n}\) s’il existe.
 
----
+- **Score Guasti** (abstrait) : une fonction \(S(n)\) qui ordonne/annote les candidats (polarité, impacts attendus, signatures, etc.).  
+  *Important :* la falsifiabilité ne dépend pas de la formule exacte, mais d’un protocole de comparaison.
 
-## ✅ Validation
+Mesures standards :
+- **Densité de premiers** sur un ensemble \(X\) : \(\pi(X)/|X|\).
+- **Precision@k** : proportion de premiers parmi les \(k\) meilleurs candidats selon \(S\).
+- **Lift** vs baseline : \(\text{lift} = \frac{\text{densité(primes dans top)} }{\text{densité(primes dans baseline)}}\).
+- **Erreur** : faux positifs / faux négatifs (si on “prédit premier” ou “prédit composé”).
 
-This theory was validated using the **TriadIA Protocol** — cross-validation across multiple AI systems:
-
-| System | Contributions |
-|--------|---------------|
-| **Claude** (Anthropic) | Core identity, proofs, implementation |
-| **Perplexity** | Academic formalization, error correction |
-| **ChatGPT** (OpenAI) | Palimpsest concept, pedagogical metaphors |
-| **Grok** (xAI) | 45° theorem (new model), corrected errors |
-
-### What was REJECTED:
-- ❌ "Breaking RSA in 0.1s" (false claim)
-- ❌ "Euclidean straight rays" (mathematically incorrect)
-- ❌ Riemann hypothesis connections (unproven)
+Baselines minimales (simples, donc cruelles) :
+1) **Baseline-6** : candidats \(6n\pm1\) (sans roue).
+2) **Baseline-wheel** : candidats \(\gcd(n,P)=1\) **sans scoring** (ordre naturel).
+3) **Random** : permutation aléatoire des mêmes candidats (contrôle statistique).
 
 ---
 
-## 📚 Documentation
+### AA.2 Cinq tests falsifiables (ce qui te met vraiment en danger)
 
-- [Mathematical Theory](docs/THEORY.md) — Full theoretical foundations
-- [Publication Plan](docs/PUBLICATION_PLAN.md) — Academic paper structure
-- [TriadIA Credits](docs/TRIADIA_CREDITS.md) — Validation methodology
+#### Test 1 — Invariant de respiration (wheel) : signature des gaps
+**Énoncé.** Pour un primorial \(P\), la respiration \(\mathcal{G}(P)\) (suite cyclique des gaps entre résidus copremiers à \(P\)) doit :
+- sommer à \(P\),
+- contenir exactement \(\varphi(P)\) pas (où \(\varphi\) est l’indicatrice d’Euler),
+- être identique à la respiration canonique calculée indépendamment.
 
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please read our contributing guidelines:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+**Réfutation.** Une seule fenêtre où la somme \(\ne P\) ou où le multiset des gaps diffère → implémentation ou définition incohérente.
 
 ---
 
-## 📄 License
+#### Test 2 — Loi de polarité (mod 6) + exclusion des carrés à Gauche
+**Énoncé.** Pour tout \(n\) copremier à 6 : \(n^2\equiv 1\pmod 6\).  
+Donc **aucun** carré \(m^2\) (avec \(\gcd(m,6)=1\)) ne peut tomber en \(6k-1\).
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
-
----
-
-## 👤 Author
-
-**Alexandre Guasti**
-- Independent Researcher, Lyon, France
-- GitHub: [@LordLexAsti](https://github.com/LordLexAsti)
-- Philosophy: Ubuntu — "I am because we are"
+**Réfutation.** Trouver un seul carré \(m^2\equiv 5\pmod 6\) → impossible (erreur logique ou erreur de code de polarité).
 
 ---
 
-## 📖 Citation
+#### Test 3 — Couverture “p²” (événements nouveaux) : apparition structurelle
+**Énoncé (niveau moteur).** Si l’on ajoute un rayon \(p\ge 5\) dans le modèle, les **événements qualitativement nouveaux** (auto-intersection du rayon, nouveaux impacts systématiques) commencent à \(p^2\).
 
-If you use this work in academic research, please cite:
+**Mesure.** Sur une fenêtre \([A,B]\), on compare la distribution des “impacts attribués à \(p\)” avant et après \(p^2\) (par annotation, pas par intuition).
 
-```bibtex
-@misc{guasti2025transform,
-  author = {Guasti, Alexandre},
-  title = {The Guasti Transform: A Geometric Framework for Multiplicative Structure Analysis},
-  year = {2025},
-  publisher = {GitHub},
-  url = {https://github.com/LordLexAsti/guasti-transform}
-}
+**Réfutation.** Si l’annotation attribue régulièrement des “événements nouveaux” à \(p\) bien avant \(p^2\) sans explication cohérente (ex : déjà expliqués par facteurs plus petits), le principe est faux ou mal défini.
+
+---
+
+#### Test 4 — Promesse prédictive : le score doit battre la roue (lift > 1)
+**Énoncé.** Pour une fenêtre large (ex : 1e6 à 1e7 selon capacités), et un \(P\) fixé (ex : 2310) :
+- on prend les candidats \(C(P;A,B)\),
+- on ordonne par \(S(n)\),
+- on mesure la densité de premiers dans le **top 1%** et le **top 5%**.
+
+**Critère minimal (falsifiable).**
+- Lift(top 1%) > 1.05
+- Lift(top 5%) > 1.02  
+(à ajuster, mais il faut **>1** de façon stable sur plusieurs fenêtres)
+
+**Réfutation.** Si le lift ≈ 1 (ou < 1) de manière stable, alors le score n’apporte pas de pouvoir prédictif au-delà de la roue : joli dessin, zéro moteur.
+
+---
+
+#### Test 5 — Robustesse en “relecture hostile” : stabilité sur fenêtres disjointes
+**Énoncé.** Les résultats du Test 4 doivent être stables sur des fenêtres disjointes :
+- \([A,B]\), \([A+\Delta,B+\Delta]\), \([A+2\Delta,B+2\Delta]\) avec \(\Delta\) grand.
+
+**Mesure.** Variance du lift et des Precision@k.  
+**Réfutation.** Si l’effet apparaît seulement “là où ça arrange” et s’effondre ailleurs → surapprentissage de motifs locaux (apophénie), pas une loi.
+
+---
+
+### AA.3 Variante “sans résidu” (contrôle négatif)
+On désactive l’information “wheel/résidus” et on garde seulement :
+- la polarité mod 6 (G/D),
+- et/ou une annotation minimale.
+
+**Attendu (hostile).** Les performances doivent chuter vers Baseline-6.  
+Si elles ne chutent pas, c’est que tu réinjectes implicitement la roue (fuite d’info).
+
+---
+
+### AA.4 Ce que cette section te protège (et t’oblige à faire)
+- Elle empêche le “c’est beau donc c’est vrai”.
+- Elle force un protocole reproductible : mêmes fenêtres, mêmes baselines, même métrique.
+- Elle donne une porte de sortie honnête : *si ça ne bat pas la roue, alors c’est une visualisation/pédagogie, pas un prédicteur.*
+## X) Visualisation ASCII (mod 30 / mod 2310)
+
+Un mini-script est fourni pour imprimer un “tamis angulaire” façon *tour + balcons*.
+
+### Mod 30 (autour du pilier 30)
+```bash
+python -m src.ascii_tower --P 30 --m 1 --span 80 --rays "7,11,13,17" --show-respiration --resp-k 16 --show-polarity --show-signature
 ```
 
+### Mod 2310 (autour du pilier 2310)
+```bash
+python -m src.ascii_tower --P 2310 --m 1 --span 400 --rays "13,17,19,23,29,31" --show-respiration --resp-k 24 --show-polarity --show-signature
+```
+
+Notes :
+- `--span` contrôle la taille de la fenêtre autour du pilier `P*m`.
+- `--rays` ne sert qu’à annoter des “impacts évidents” (divisibilité par ces rayons) avant la vérification MR.
+- Les 💎 affichés sont testés par Miller–Rabin déterministe 64-bit (donc fiables pour nos tailles usuelles).
+
+
+## 8) Organisation du code
+
+- `src/wheel.py` : calcul de `R(P)` et `G(P)`
+- `src/features.py` : pré-calculs (primes, impacts, spf, saturation)
+- `src/score.py` : score v1 (sans résidu)
+- `src/eval.py` : extraction candidats + calcul `P@K` + fenêtres
+- `notebooks/` : espace de démonstration (optionnel)
+
 ---
 
-## 🙏 Acknowledgments
+---
 
-- Validated through the TriadIA Protocol (Claude, Perplexity, ChatGPT, Grok)
-- Inspired by Pythagorean multiplication tables and Euler's work on logarithmic spirals
-- Ubuntu philosophy: collective intelligence for mathematical discovery
+## 9) Tamis Angulaire (schéma ASCII) — version “reviewer hostile”
+
+### 9.1 Filtre mod 6 (piliers 6k : respiration grossière)
+
+Pour tout premier \(p>3\), on a nécessairement \(p \equiv 1\) ou \(5 \pmod 6\), donc \(p=6k\pm1\).
+Ce filtre est **vrai** mais **grossier** : il élimine uniquement les multiples de 2 et 3.
+
+Schéma (exemple autour de 90) :
+
+```
+...  84  85  86  87  88  89  90  91  92  93  94  95  96  97  98 ...
+      X       X       X       X   P   X   C   X       X   C   X   P
+          (6k-1)    (6k)     (6k+1)
+```
+
+- `X` : éliminé d’office (pair ou multiple de 3)
+- `P` : premier (parmi les survivants)
+- `C` : composé (parmi les survivants)
+
+### 9.2 Filtre mod 2310 (roue primorielle : respiration haute définition)
+
+Avec \(P=2310=2·3·5·7·11\), les candidats sont exactement :
+\[
+C=\{n:\gcd(n,P)=1\} = \bigcup_{r\in R(P)} \{n\equiv r \pmod P\}.
+\]
+
+Le tour complet contient \(\varphi(P)=480\) résidus survivants.
+Le motif de respiration \(\mathcal{G}(P)\) décrit les **gaps cycliques** entre ces résidus.
+
+ASCII (un tour de roue) :
+
+```
+2310m |---g1---| r1 |--g2--| r2 |--g3--| r3 | ... |--g480--| r480 | ↺
+        ^              ^              ^
+   cases impossibles   candidats       candidats
+   (touchées par       (coprimes)     (coprimes)
+   2,3,5,7,11)
+```
+
+### 9.3 Lemme “entrée en jeu à p²” (principe de crible, formulation Guasti)
+
+> **Lemme (début d’action d’un rayon \(p\))**  
+> Si un entier composé \(n\) a pour plus petit facteur premier \(p\), alors \(n \ge p^2\).  
+> Donc avant \(p^2\), le “rayon \(p\)” n’élimine **aucun** candidat qui n’aurait déjà été éliminé par des facteurs plus petits.
+
+Interprétation “Tamis Angulaire” : chaque nouveau premier \(p\) ne commence à créer des “pièges” (intersections inédites) qu’à partir de \(p^2\).
+C’est une justification structurelle (et standard) du fait que la grille se “sature” par paliers.
+
+### 9.4 Ce que l’on affirme (et ce que l’on n’affirme pas)
+
+- ✅ **Certain** : la périodicité des candidats modulo \(P\) (roue) et l’invariant \(\mathcal{G}(P)\).
+- ✅ **Mesurable / falsifiable** : la performance de tri (P@K) du score v1 sur des fenêtres disjointes.
+- ❌ **Non-claim** : aucune “preuve” de primalité, aucune démonstration de RH, aucune formule fermée.
 
 ---
 
-*"Prime numbers are the indelible ink of arithmetic."* — The Arithmetic Palimpsest
+## 10) License
+
+À définir (MIT recommandé pour diffusion/interop).
