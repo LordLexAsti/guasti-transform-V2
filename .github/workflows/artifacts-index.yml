@@ -1,0 +1,49 @@
+# .github/workflows/artifacts-index.yml
+name: artifacts-index
+
+on:
+  workflow_run:
+    workflows: ["experiments"]
+    types: [completed]
+
+jobs:
+  index:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update artifacts index (append run metadata)
+        run: |
+          set -e
+          mkdir -p results/index
+          INDEX="results/index/ARTIFACTS_INDEX.md"
+
+          if [ ! -f "$INDEX" ]; then
+            cat > "$INDEX" << 'EOF'
+          # Artifacts Index (GitHub Actions)
+
+          Ce fichier est un journal des runs du workflow `experiments`.
+          Il ne contient pas les artefacts eux-mêmes (téléchargeables depuis GitHub Actions),
+          mais une trace *audit* : date, run id, paramètres si visibles.
+
+          ---
+          EOF
+          fi
+
+          echo "## Run $(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> "$INDEX"
+          echo "- workflow: experiments" >> "$INDEX"
+          echo "- status: ${{ github.event.workflow_run.conclusion }}" >> "$INDEX"
+          echo "- run_id: ${{ github.event.workflow_run.id }}" >> "$INDEX"
+          echo "- run_number: ${{ github.event.workflow_run.run_number }}" >> "$INDEX"
+          echo "- url: ${{ github.event.workflow_run.html_url }}" >> "$INDEX"
+          echo "" >> "$INDEX"
+
+      - name: Commit index
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add results/index/ARTIFACTS_INDEX.md
+          git commit -m "chore: update artifacts index" || exit 0
+          git push
