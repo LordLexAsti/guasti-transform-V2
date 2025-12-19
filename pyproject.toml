@@ -1,0 +1,32 @@
+# pyproject.toml
+[project]
+name = "guasti-transform"
+version = "0.1.0"
+description = "Guasti Grid / Guasti Transform: geometric divisibility visualization + falsifiable experimental framework."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Alexandre Guasti" }]
+keywords = ["number theory", "primes", "divisibility", "visualization", "wheel factorization", "pedagogy"]
+
+# Optionnel si tu packages vraiment le code
+# dependencies = []
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = ["results", "data", "dist", "build", ".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501"]  # on laisse la forme gérer la longueur si besoin
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-q"
+testpaths = ["tests"]
+pythonpath = ["."]
